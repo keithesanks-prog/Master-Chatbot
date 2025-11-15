@@ -1,0 +1,37 @@
+[Unit]
+Description=Master Agent API for Tilli - UNICEF Project
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=master-agent
+Group=master-agent
+WorkingDirectory=/opt/master-agent
+Environment="PATH=/opt/master-agent/venv/bin"
+ExecStart=/opt/master-agent/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=master-agent
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/master-agent
+ReadOnlyPaths=/etc
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
+

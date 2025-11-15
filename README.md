@@ -624,13 +624,101 @@ master-agent/
 
 ### Running the Service
 
-Start the FastAPI server:
+#### Development Mode
+
+Start the FastAPI server for development:
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The service will be available at `http://localhost:8000`.
+
+#### Production Mode (Using systemd)
+
+For production deployments on Linux, use the systemd service:
+
+**1. Install the service:**
+```bash
+sudo ./deployment/manage-service.sh install
+sudo systemctl enable master-agent.service  # Enable on boot (optional)
+```
+
+**2. Start the service:**
+```bash
+sudo systemctl start master-agent
+# or
+sudo ./deployment/manage-service.sh start
+```
+
+**3. Check service status:**
+```bash
+sudo systemctl status master-agent
+# or
+sudo ./deployment/manage-service.sh status
+```
+
+**4. Stop the service (graceful shutdown - fail-safe):**
+```bash
+sudo systemctl stop master-agent
+# or
+sudo ./deployment/manage-service.sh stop
+```
+
+**5. Restart the service:**
+```bash
+sudo systemctl restart master-agent
+# or
+sudo ./deployment/manage-service.sh restart
+```
+
+**6. Reload the service (graceful reload):**
+```bash
+sudo systemctl reload master-agent
+# or
+sudo ./deployment/manage-service.sh reload
+```
+
+#### Service Management Script
+
+The `deployment/manage-service.sh` script provides a convenient way to manage the service:
+
+```bash
+# Make script executable (first time only)
+chmod +x deployment/manage-service.sh
+
+# Available commands
+./deployment/manage-service.sh start      # Start service
+./deployment/manage-service.sh stop       # Stop service (graceful shutdown - fail-safe)
+./deployment/manage-service.sh restart    # Restart service
+./deployment/manage-service.sh reload     # Reload service (graceful)
+./deployment/manage-service.sh status     # Show status and recent logs
+./deployment/manage-service.sh install    # Install service file
+./deployment/manage-service.sh help       # Show help message
+```
+
+#### Fail-Safe Shutdown Behavior
+
+The service implements **fail-safe shutdown** - when stopping, it:
+- ✅ **Rejects all new requests** immediately (fail-safe mode)
+- ✅ **Allows in-flight requests** to complete gracefully
+- ✅ **Waits up to 30 seconds** for requests to complete
+- ✅ **Prevents new data access** during shutdown
+- ✅ **Ensures audit logs** are written before shutdown
+
+**Response when service is stopping:**
+```json
+{
+  "error": "Service Unavailable",
+  "message": "Service is shutting down. Please try again later.",
+  "service_state": "stopping",
+  "fail_safe": true
+}
+```
+
+For detailed information about service management, see [SERVICE_MANAGEMENT.md](SERVICE_MANAGEMENT.md).
+
+**Quick Reference:** See [USER_GUIDE.md](USER_GUIDE.md) for a quick command reference.
 
 ### API Documentation
 
@@ -665,7 +753,7 @@ Main endpoint for educator questions.
 
 ### GET /health
 
-Health check endpoint.
+Basic health check endpoint.
 
 **Response:**
 ```json
@@ -673,6 +761,96 @@ Health check endpoint.
   "status": "healthy",
   "version": "0.1.0"
 }
+```
+
+### GET /health/security
+
+**Comprehensive Security Health Check Endpoint** ✅ **NEW**
+
+Validates that all security countermeasures are active and functioning properly. This endpoint checks:
+
+- ✅ **Service Status** - Service is running
+- ✅ **Transport Security** - TLS/HTTPS enforcement
+- ✅ **Authentication** - Authentication configuration
+- ✅ **Rate Limiting** - Rate limiting is active
+- ✅ **Input Validation** - Input sanitization is working
+- ✅ **Harmful Content Detection** - Harmful content detection is active
+- ✅ **Audit Logging** - Audit logging is configured
+- ✅ **External API** - Gemini API connectivity
+- ✅ **Security Headers** - Security headers middleware
+- ✅ **CORS** - CORS configuration
+
+**Response:**
+```json
+{
+  "timestamp": "2024-01-01T12:00:00Z",
+  "overall_status": "healthy",
+  "service_version": "0.1.0",
+  "checks": {
+    "service": {
+      "status": "healthy",
+      "message": "Service is running",
+      "details": {...}
+    },
+    "transport_security": {
+      "status": "healthy",
+      "message": "TLS/HTTPS configuration checked",
+      "details": {
+        "environment": "production",
+        "tls_enforced": true,
+        "https_enforced": true
+      }
+    },
+    "authentication": {
+      "status": "degraded",
+      "message": "Authentication configuration checked",
+      "details": {
+        "authentication_enabled": false,
+        "jwt_secret_configured": false,
+        "issues": ["Authentication not enabled in production"]
+      }
+    },
+    ...
+  },
+  "summary": {
+    "total_checks": 10,
+    "healthy": 9,
+    "degraded": 1,
+    "unhealthy": 0,
+    "critical": 0,
+    "issues": [
+      {
+        "check": "authentication",
+        "status": "degraded",
+        "message": "Authentication configuration checked",
+        "issues": ["Authentication not enabled in production"]
+      }
+    ],
+    "overall_status": "degraded"
+  }
+}
+```
+
+**HTTP Status Codes:**
+- `200 OK` - Healthy or Degraded (details in response body)
+- `503 Service Unavailable` - Unhealthy or Critical issues
+
+**Use Cases:**
+- **Monitoring Systems** - Automated monitoring can check `/health/security` to ensure security measures are active
+- **Incident Response** - Quickly identify which security measures are not functioning
+- **Compliance Audits** - Demonstrate that security countermeasures are active (UNICEF, FERPA)
+- **Deployment Verification** - Verify security configuration after deployment
+- **Alerting** - Integration with monitoring tools (PagerDuty, Datadog, etc.) to alert on security failures
+
+**Example Usage:**
+```bash
+# Check security health status
+curl https://api.example.com/health/security
+
+# For monitoring systems (returns 503 if unhealthy/critical)
+# Use HTTP status code for alerts:
+# 200 = OK (healthy or degraded)
+# 503 = Service Unavailable (unhealthy or critical)
 ```
 
 ### GET /query/sources
@@ -912,7 +1090,9 @@ The Master Agent handles sensitive student assessment data and must be secured b
 8. Implement secret management (AWS Secrets Manager/Vault)
 9. Add monitoring and alerting
 
-**📚 Security Documentation:**
+**📚 Documentation:**
+- [USER_GUIDE.md](USER_GUIDE.md) - **Quick reference guide for service management commands**
+- [SERVICE_MANAGEMENT.md](SERVICE_MANAGEMENT.md) - **Service management & fail-safe shutdown (detailed guide)**
 - [SECURITY.md](SECURITY.md) - Comprehensive threat analysis
 - [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md) - Detailed protection assessment
 - [AUTHENTICATION_OPTIONS.md](AUTHENTICATION_OPTIONS.md) - IAM/authentication options
@@ -920,6 +1100,7 @@ The Master Agent handles sensitive student assessment data and must be secured b
 - [HARMFUL_CONTENT_DETECTION.md](HARMFUL_CONTENT_DETECTION.md) - **Harmful content detection & alerting (UNICEF child protection)**
 - [AUDIT_LOGGING.md](AUDIT_LOGGING.md) - **FERPA & UNICEF-compliant audit logging**
 - [EXTERNAL_API_SECURITY.md](EXTERNAL_API_SECURITY.md) - **External API security (Gemini API, API key management, rate limiting)**
+- [HEALTH_CHECK.md](HEALTH_CHECK.md) - **Security health check endpoint (validate countermeasures)**
 - [TLS_CONFIGURATION.md](TLS_CONFIGURATION.md) - TLS/HTTPS setup guide
 - [KNOWN_KEY_VALUES.md](KNOWN_KEY_VALUES.md) - All data structures documented
 

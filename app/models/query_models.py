@@ -59,6 +59,15 @@ class HealthResponse(BaseModel):
     version: str = Field(..., description="Service version")
 
 
+class SecurityHealthResponse(BaseModel):
+    """Response model for the /health/security endpoint."""
+    timestamp: str = Field(..., description="Timestamp of health check")
+    overall_status: str = Field(..., description="Overall health status (healthy, degraded, unhealthy, critical)")
+    service_version: str = Field(..., description="Service version")
+    checks: Dict[str, Any] = Field(..., description="Individual security check results")
+    summary: Dict[str, Any] = Field(..., description="Summary of health checks")
+
+
 class PromptEvalRequest(BaseModel):
     """Request model for receiving data from the Prompt Eval Tool."""
     prompt: Optional[str] = Field(None, description="The prompt that was evaluated")
