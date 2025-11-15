@@ -1,0 +1,2 @@
+"""Master Agent application package."""
+

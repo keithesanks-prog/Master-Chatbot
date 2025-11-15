@@ -1,0 +1,23 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+python-multipart==0.0.6
+
+# LLM SDK dependencies
+google-generativeai>=0.3.0  # For Gemini API
+# openai==1.3.0  # For OpenAI (optional)
+
+# Security dependencies
+slowapi==0.1.9  # Rate limiting
+python-jose[cryptography]==3.3.0  # JWT tokens for authentication
+passlib[bcrypt]==1.7.4  # Password hashing
+python-multipart==0.0.6  # Form data parsing (already included)
+
+# TODO: Add database dependencies once schemas are provided
+# sqlalchemy==2.0.23
+# psycopg2-binary==2.9.9  # For PostgreSQL
+# or asyncpg==0.29.0  # For async PostgreSQL
+
